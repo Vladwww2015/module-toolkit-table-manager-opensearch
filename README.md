@@ -1,0 +1,132 @@
+### How to use.
+
+--- di.xml
+```xml
+<virtualType name="Custom\Module\Model\GetConnectionName"
+             type="JRP\TableManager\TableManager\GetConnectionName">
+    <arguments>
+        <argument name="connectionNameConfigPath" xsi:type="string">default</argument>
+    </arguments>
+</virtualType>
+
+<virtualType name="Custom\Module\Model\CustomIndexBuilderSearch"
+             type="JRP\TableManagerOpenSearch\TableManager\IndexBuilderSearch"
+>
+    <arguments>
+        <argument name="getConnectionName" xsi:type="object">Custom\Module\Model\GetConnectionName</argument>
+        <argument name="indexName" xsi:type="string">custom_index_name</argument>
+        <argument name="indexTableName" xsi:type="string">custom_index_table</argument>
+        <argument name="primaryColumn" xsi:type="string">entity_id</argument>
+        <argument name="indexTableColumns" xsi:type="array">
+            <item name="entity_id" xsi:type="string">entity_id</item>
+            <item name="name" xsi:type="string">name</item>
+            <item name="total" xsi:type="string">total</item>
+        </argument>
+    </arguments>
+</virtualType>
+<type name="Custom\Module\Model\Indexer\CustomIndexer">
+    <arguments>
+        <argument name="indexBuilder" xsi:type="object">Custom\Module\Model\CustomIndexBuilderSearch</argument>
+    </arguments>
+</type>
+
+
+```
+
+- Index process
+```php
+namespace Custom\Module\Model\Indexer;
+
+use JRP\TableManager\TableManager\IndexBuilderSearchInterface;
+use Magento\Framework\Indexer\ActionInterface;
+
+
+class CustomIndexer implements ActionInterface
+{
+    public function __construct(protected IndexBuilderSearchInterface $indexBuilder)
+    {}
+
+    public function execute($ids = null)
+    {
+        $this->indexBuilder->rebuild($ids);
+    }
+
+    public function executeFull()
+    {
+        $this->indexBuilder->rebuild();
+    }
+
+    public function executeList(array $ids)
+    {
+        $this->indexBuilder->rebuild($ids);
+    }
+
+    public function executeRow($id)
+    {
+        $this->indexBuilder->rebuild([$id]);
+    }
+}
+
+```
+
+- 1. Search and get OpenSearch Results Format
+```php
+use JRP\TableManager\TableManager\IndexBuilderSearchInterface;
+
+class CustomSearch
+{
+    public function __construct(
+        protected IndexBuilderSearchInterface $indexBuilderSearch
+    )
+    {
+    }
+    
+    public function search()
+    {
+        $searchCriteria = ['sku' => 'test'];
+        
+        $page = 1;
+        $size = 300;
+        $sort = ['sku' => 'DESC']
+    
+        $this->indexBuilderSearch->searchWithPagination($searchCriteria, $page, $size, $sort)//array;
+        $this->indexBuilderSearch->search($searchCriteria);// array
+        $this->indexBuilderSearch->getById(1); //array
+    }
+}
+
+```
+
+- 2. Search and get magento array Format
+```php
+use JRP\TableManager\TableManager\IndexBuilderSearchInterface;
+use JRP\TableManager\TableManager\TableManagerInterface;
+
+class CustomSearch
+{
+    public function __construct(
+        protected IndexBuilderSearchInterface $indexBuilderSearch,
+        protected TableManagerInterface $tableManager
+    ){}
+    
+    public function search()
+    {
+        $searchCriteria = ['sku' => 'test'];
+        
+        $page = 1;
+        $size = 300;
+        $sort = ['sku' => 'DESC']
+        
+        $tableRequest = $this->tableManager->getTableRequest();
+        $tableRequest
+            ->setCurPage($page)
+            ->setLimit($size)
+            ->setSortOrder($sort)
+            ->setValues($searchCriteria);
+            
+        $this->tableManager->indexFastSearch($tableRequest, $this->indexBuilderSearch); //array magento array format
+    }
+}
+
+
+```

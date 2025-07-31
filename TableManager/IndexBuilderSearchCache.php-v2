@@ -1,0 +1,113 @@
+<?php
+
+namespace JRP\TableManagerOpenSearch\TableManager;
+
+use JRP\TableManager\TableManager\GetConnectionNameInterface;
+
+use JRP\TableManager\TableManager\IndexResponseResultInterface;
+use JRP\TableManagerOpenSearch\Service\CursorCache;
+use Magento\Framework\Api\Search\SearchResultInterface;
+use Magento\Framework\App\ResourceConnection;
+use Magento\Elasticsearch\SearchAdapter\ConnectionManager;
+use Psr\Log\LoggerInterface;
+
+class IndexBuilderSearchCache extends IndexBuilderSearch
+{
+    public function __construct(
+        protected CursorCache $cursorCacheService,
+        LoggerInterface $logger,
+        ResourceConnection $resource,
+        ConnectionManager $connectionManager,
+        GetConnectionNameInterface $getConnectionName,
+        IndexResponseResultInterface $indexResponseResult,
+        string $indexName,
+        string $indexTableName,
+        string $primaryColumn,
+        array $indexTableColumns,
+        int $indexBatchSize = 50000,
+    )  {
+        throw new \Exception('This Class has issue with cache. TODO');
+        parent::__construct(
+            $logger,
+            $resource,
+            $connectionManager,
+            $getConnectionName,
+            $indexResponseResult,
+            $indexName,
+            $indexTableName,
+            $primaryColumn,
+            $indexTableColumns,
+            $indexBatchSize
+        );
+    }
+
+    /**
+     * Search with efficient deep pagination
+     */
+    public function searchWithPagination(
+        array $searchCriteria,
+        int $page = 1,
+        int $pageSize = 50,
+        array $sort = ['entity_id.keyword' => 'asc']
+    ): SearchResultInterface {
+
+        $params = [
+            'index' => $this->indexName,
+            'body' => [
+                'track_total_hits' => false,
+                'size' => $pageSize,
+                'query' => $this->buildOptimizedQuery($searchCriteria),
+                'sort' => $this->prepareSort($sort)
+            ]
+        ];
+
+        if ($page > 1) {
+            $cachedSearchAfter = $this->cursorCacheService->getCursor($this->getIndexName(), $page, $pageSize, $sort);
+            if(!$cachedSearchAfter) {
+                $this->warmCache($searchCriteria, $page, $pageSize, $sort);
+                $cachedSearchAfter = $this->cursorCacheService->getCursor($this->getIndexName(), $page, $pageSize, $sort);
+            }
+            if ($cachedSearchAfter) {
+                $params['body']['search_after'] = $cachedSearchAfter;
+            } else {
+                $searchAfter = $this->getFastPosition($searchCriteria, $page, $pageSize, $sort);
+                if ($searchAfter) {
+                    $params['body']['search_after'] = $searchAfter;
+                    $this->cursorCacheService->saveCursor($this->getIndexName(), $page, $pageSize, $sort, $searchAfter);
+                }
+            }
+        }
+
+        return $this->indexResponseResult->getResponse(
+            $this->client->search($params)
+        );
+    }
+
+    public function searchAfterEvent(array $searchAfter, int $page, int $pageSize, array $sort): void
+    {
+        $this->cursorCacheService->saveCursor($this->getIndexName(), $page, $pageSize, $sort, $searchAfter);
+    }
+
+    protected function calculateMinimumCachedCursor(int $page, int $pageSize, array $sort): array|null
+    {
+        do {
+
+            $cachedSearchAfter = $this->cursorCacheService->getCursor($this->getIndexName(), --$page, $pageSize, $sort);
+            if($cachedSearchAfter) return [$page, $cachedSearchAfter];
+        } while ($page >= 1);
+
+        return null;
+    }
+
+    public function warmCache(array $searchCriteria, int $targetPage, int $pageSize, array $sort)
+    {
+        [$page, $cachedSearchAfter] = $this->calculateMinimumCachedCursor($targetPage, $pageSize, $sort);
+
+        do {
+            $searchAfter = $this->getFastPosition($searchCriteria, $page+1, $pageSize, $sort, $page);
+            $page++;
+        } while ($page <= $targetPage);
+
+        return $searchAfter;
+    }
+}
