@@ -1,11 +1,11 @@
 <?php
 
-namespace JRP\TableManagerOpenSearch\TableManager;
+namespace ModuleToolkit\TableManagerOpenSearch\TableManager;
 
-use JRP\TableManager\TableManager\GetConnectionNameInterface;
+use ModuleToolkit\TableManager\TableManager\GetConnectionNameInterface;
 
-use JRP\TableManager\TableManager\IndexResponseResultInterface;
-use JRP\TableManagerOpenSearch\Service\CursorCache;
+use ModuleToolkit\TableManager\TableManager\IndexResponseResultInterface;
+use ModuleToolkit\TableManagerOpenSearch\Service\CursorCache;
 use Magento\Framework\Api\Search\SearchResultInterface;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Elasticsearch\SearchAdapter\ConnectionManager;

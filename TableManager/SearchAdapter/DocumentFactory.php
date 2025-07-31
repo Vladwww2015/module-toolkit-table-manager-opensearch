@@ -1,9 +1,9 @@
 <?php
 
-namespace JRP\TableManagerOpenSearch\TableManager\SearchAdapter;
+namespace ModuleToolkit\TableManagerOpenSearch\TableManager\SearchAdapter;
 
 use Magento\Framework\Search\EntityMetadata;
-use JRP\TableManagerOpenSearch\TableManager\Api\Search\Document;
+use ModuleToolkit\TableManagerOpenSearch\TableManager\Api\Search\Document;
 use Magento\Elasticsearch\SearchAdapter\DocumentFactory as BaseDocumentFactory;
 
 class DocumentFactory extends BaseDocumentFactory

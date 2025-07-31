@@ -3,14 +3,14 @@
 --- di.xml
 ```xml
 <virtualType name="Custom\Module\Model\GetConnectionName"
-             type="JRP\TableManager\TableManager\GetConnectionName">
+             type="ModuleToolkit\TableManager\TableManager\GetConnectionName">
     <arguments>
         <argument name="connectionNameConfigPath" xsi:type="string">default</argument>
     </arguments>
 </virtualType>
 
 <virtualType name="Custom\Module\Model\CustomIndexBuilderSearch"
-             type="JRP\TableManagerOpenSearch\TableManager\IndexBuilderSearch"
+             type="ModuleToolkit\TableManagerOpenSearch\TableManager\IndexBuilderSearch"
 >
     <arguments>
         <argument name="getConnectionName" xsi:type="object">Custom\Module\Model\GetConnectionName</argument>
@@ -37,7 +37,7 @@
 ```php
 namespace Custom\Module\Model\Indexer;
 
-use JRP\TableManager\TableManager\IndexBuilderSearchInterface;
+use ModuleToolkit\TableManager\TableManager\IndexBuilderSearchInterface;
 use Magento\Framework\Indexer\ActionInterface;
 
 
@@ -71,7 +71,7 @@ class CustomIndexer implements ActionInterface
 
 - 1. Search and get OpenSearch Results Format
 ```php
-use JRP\TableManager\TableManager\IndexBuilderSearchInterface;
+use ModuleToolkit\TableManager\TableManager\IndexBuilderSearchInterface;
 
 class CustomSearch
 {
@@ -99,8 +99,8 @@ class CustomSearch
 
 - 2. Search and get magento array Format
 ```php
-use JRP\TableManager\TableManager\IndexBuilderSearchInterface;
-use JRP\TableManager\TableManager\TableManagerInterface;
+use ModuleToolkit\TableManager\TableManager\IndexBuilderSearchInterface;
+use ModuleToolkit\TableManager\TableManager\TableManagerInterface;
 
 class CustomSearch
 {

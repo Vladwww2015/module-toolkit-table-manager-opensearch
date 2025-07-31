@@ -1,6 +1,6 @@
 <?php
 
-namespace JRP\TableManagerOpenSearch\Service;
+namespace ModuleToolkit\TableManagerOpenSearch\Service;
 
 use Magento\Framework\App\CacheInterface;
 

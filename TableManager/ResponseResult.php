@@ -1,8 +1,8 @@
 <?php
 
-namespace JRP\TableManagerOpenSearch\TableManager;
+namespace ModuleToolkit\TableManagerOpenSearch\TableManager;
 
-use JRP\TableManager\TableManager\IndexResponseResultInterface;
+use ModuleToolkit\TableManager\TableManager\IndexResponseResultInterface;
 use Magento\Framework\Api\Search\SearchResultFactory;
 use Magento\Framework\Api\Search\SearchResultInterface;
 

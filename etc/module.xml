@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:Module/etc/module.xsd">
-    <module name="JRP_TableManagerOpenSearch">
+    <module name="ModuleToolkit_TableManagerOpenSearch">
         <sequence>
             <module name="Magento_OpenSearch"/>
         </sequence>

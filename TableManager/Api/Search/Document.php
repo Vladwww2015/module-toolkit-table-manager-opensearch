@@ -1,6 +1,6 @@
 <?php
 
-namespace JRP\TableManagerOpenSearch\TableManager\Api\Search;
+namespace ModuleToolkit\TableManagerOpenSearch\TableManager\Api\Search;
 
 use Magento\Framework\Api\Search\Document as BaseDocument;
 

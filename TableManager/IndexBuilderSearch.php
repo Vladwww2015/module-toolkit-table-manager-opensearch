@@ -1,11 +1,11 @@
 <?php
 
-namespace JRP\TableManagerOpenSearch\TableManager;
+namespace ModuleToolkit\TableManagerOpenSearch\TableManager;
 
-use JRP\TableManager\TableManager\GetConnectionNameInterface;
-use JRP\TableManager\TableManager\GetSearchEngineType;
-use JRP\TableManager\TableManager\IndexBuilderSearchInterface;
-use JRP\TableManager\TableManager\IndexResponseResultInterface;
+use ModuleToolkit\TableManager\TableManager\GetConnectionNameInterface;
+use ModuleToolkit\TableManager\TableManager\GetSearchEngineType;
+use ModuleToolkit\TableManager\TableManager\IndexBuilderSearchInterface;
+use ModuleToolkit\TableManager\TableManager\IndexResponseResultInterface;
 use Magento\Framework\Api\Search\SearchResultInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\ResourceConnection;

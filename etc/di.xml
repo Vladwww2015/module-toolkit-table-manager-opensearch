@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
-    <type name="JRP\TableManagerOpenSearch\TableManager\IndexBuilderSearch">
+    <type name="ModuleToolkit\TableManagerOpenSearch\TableManager\IndexBuilderSearch">
         <arguments>
-            <argument name="indexResponseResult" xsi:type="object">JRP\TableManagerOpenSearch\TableManager\ResponseResult</argument>
+            <argument name="indexResponseResult" xsi:type="object">ModuleToolkit\TableManagerOpenSearch\TableManager\ResponseResult</argument>
         </arguments>
     </type>
 </config>

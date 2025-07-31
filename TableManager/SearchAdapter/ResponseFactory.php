@@ -1,6 +1,6 @@
 <?php
 
-namespace JRP\TableManagerOpenSearch\TableManager\SearchAdapter;
+namespace ModuleToolkit\TableManagerOpenSearch\TableManager\SearchAdapter;
 
 use Magento\Elasticsearch\SearchAdapter\AggregationFactory;
 use Magento\Elasticsearch\SearchAdapter\ResponseFactory as BaseResponseFactory;
