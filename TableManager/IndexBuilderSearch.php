@@ -217,7 +217,7 @@ class IndexBuilderSearch implements IndexBuilderSearchInterface
                 $ids,
             ) as $data) {
                 $batch[] = $data;
-                if(count($batch) > 1000){
+                if(count($batch) > $this->indexBatchSize){
                     $this->processBatch($batch, $existingIds);
                     $batch = [];
                 }
