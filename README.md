@@ -30,8 +30,36 @@
     </arguments>
 </type>
 
+```
+
+- create indexer.xml
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Indexer/etc/indexer.xsd">
+    <indexer id="custom_unique_name_index" view_id="custom_unique_name_index"
+             class="Module\Custom\Model\Indexer\CustomNameIndexer" shared_index="custom_unique_name_index">
+        <title translate="true">Custom Name-Title</title>
+        <description translate="true">Custom Name-Description</description>
+    </indexer>
+</config>
+```
+
+- create mview.xml
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Mview/etc/mview.xsd">
+    <view id="custom_unique_name_index" class="Module\Custom\Model\Indexer\CustomNameIndexer"
+          group="indexer">
+        <subscriptions>
+            <table name="custom_table_name" entity_column="entity_id"/>
+        </subscriptions>
+    </view>
+</config>
 
 ```
+
 
 - Index process
 ```php
