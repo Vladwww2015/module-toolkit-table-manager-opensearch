@@ -7,17 +7,16 @@ use ModuleToolkit\TableManager\TableManager\GetSearchEngineType;
 use ModuleToolkit\TableManager\TableManager\IndexBuilderSearchInterface;
 use ModuleToolkit\TableManager\TableManager\IndexResponseResultInterface;
 use Magento\Framework\Api\Search\SearchResultInterface;
-use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Elasticsearch\SearchAdapter\ConnectionManager;
 use Psr\Log\LoggerInterface;
-use OpenSearch\Common\Exceptions\Missing404Exception;
+use OpenSearch\Exception\NotFoundHttpException;
 
 class IndexBuilderSearch implements IndexBuilderSearchInterface
 {
     private const REBUILD_MODE_POSTFIX = '_tmp';
     private const DEFAULT_BATCH_SIZE = 50000;
-    private const DEFAULT_SORT_FIELD = 'entity_id.keyword';
+    private const DEFAULT_SORT_FIELD = 'entity_id';
     private const DEFAULT_SORT_DIRECTION = 'desc';
 
     protected \OpenSearch\Client $client;
@@ -62,7 +61,7 @@ class IndexBuilderSearch implements IndexBuilderSearchInterface
                 'id' => $id
             ]);
             return $this->indexResponseResult->getResponse($response);
-        } catch (Missing404Exception $e) {
+        } catch (NotFoundHttpException $e) {
             return $this->indexResponseResult->getResponse([]);
         } catch (\Exception $e) {
             $this->logger->error("Failed to get document by ID: {$id}", ['exception' => $e]);
@@ -336,7 +335,7 @@ class IndexBuilderSearch implements IndexBuilderSearchInterface
         try {
             $aliases = $this->client->indices()->getAlias(['name' => $this->getAliasName()]);
             return !empty($aliases) ? array_key_first($aliases) : null;
-        } catch (Missing404Exception $e) {
+        } catch (NotFoundHttpException $e) {
             return null;
         } catch (\Exception $e) {
             $this->logger->error("Failed to get current aliased index", ['exception' => $e]);
@@ -361,19 +360,55 @@ class IndexBuilderSearch implements IndexBuilderSearchInterface
     protected function buildQuery(array $searchCriteria): array
     {
         $must = [];
+        $filter = [];
 
-        foreach ($searchCriteria as $field => $value) {
-            $must[] = [
-                'wildcard' => [
-                    $this->normalizeFieldName($field) => [
-                        'value' => strtolower(rtrim($value, '*')) . '*',
-                        'case_insensitive' => true
-                    ]
-                ]
-            ];
+        foreach ($searchCriteria as $field => $criterion) {
+            if (!is_array($criterion) || !isset($criterion['value'])) {
+                $criterion = ['condition' => 'EQ', 'value' => $criterion];
+            }
+
+            $condition = strtoupper($criterion['condition'] ?? 'EQ');
+            $value = $criterion['value'];
+
+            switch (strtoupper($condition)) {
+                case 'LIKE':
+
+                    $must[] = [
+                        'wildcard' => [
+                            $this->normalizeFieldName($field) => [
+                                'value' => strtolower(str_replace('%', '*', $value)) . '*',
+                                'case_insensitive' => true,
+                            ]
+                        ]
+                    ];
+                    break;
+
+                case 'EQ':
+                    $filter[] = ['term' => [$field => $value]];
+                    break;
+
+                case 'IN':
+                    $filter[] = ['terms' => [$field => (array)$value]];
+                    break;
+
+                case 'GT':
+                case 'GTE':
+                case 'LT':
+                case 'LTE':
+                    $opMap = ['GT' => 'gt', 'GTE' => 'gte', 'LT' => 'lt', 'LTE' => 'lte'];
+                    $must[] = ['range' => [$field => [$opMap[$condition] => $value]]];
+                    break;
+
+                default:
+                    $filter[] = ['term' => [$field => $value]];
+            }
         }
 
-        return ['bool' => ['must' => $must]];
+        $bool = [];
+        if ($must)   { $bool['must'] = $must; }
+        if ($filter) { $bool['filter'] = $filter; }
+
+        return ['bool' => $bool];
     }
 
     protected function normalizeSortFields(array $sort): array
@@ -391,7 +426,7 @@ class IndexBuilderSearch implements IndexBuilderSearchInterface
 
     protected function normalizeFieldName(string $field): string
     {
-        if (in_array($field, ['entity_id', 'some_numeric_field'])) {
+        if (in_array($field, ['entity_id'])) {
             return $field;
         }
 
