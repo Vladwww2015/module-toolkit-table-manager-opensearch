@@ -30,6 +30,7 @@ class IndexBuilderSearch implements IndexBuilderSearchInterface
         protected GetConnectionNameInterface $getConnectionName,
         protected IndexResponseResultInterface $indexResponseResult,
         private GetSearchEngineType $getSearchEngineType,
+        protected BuildSelectQueryInterface $buildSelectQuery,
         protected string $indexName,
         protected string $indexTableName,
         protected string $primaryColumn,
@@ -206,39 +207,57 @@ class IndexBuilderSearch implements IndexBuilderSearchInterface
         $existingIds = [];
         $page = 0;
 
-        do {
-            $select = $this->buildSelectQuery($connection, $table, $ids, $page);
-            $data = $connection->fetchAll($select);
+        if($this->buildSelectQuery->getMode() === Mode::GENERATOR){
+            $batch = [];
+            foreach ($this->buildSelectQuery->getData(
+                $connection,
+                $table,
+                $this->indexTableColumns,
+                $this->primaryColumn,
+                $ids,
+            ) as $data) {
+                $batch[] = $data;
+                if(count($batch) > 1000){
+                    $this->processBatch($batch, $existingIds);
+                    $batch = [];
+                }
+            }
+            if(count($batch)){
+                $this->processBatch($batch, $existingIds);
+            }
+            return;
+        }
 
-            if (!empty($data)) {
-                $this->processBatch($data, $existingIds);
+        if($this->buildSelectQuery->getMode() === Mode::DEFAULT) {
+            do {
+
+                $data = $connection->fetchAll($this->buildSelectQuery->getSelectQuery(
+                    $connection,
+                    $table,
+                    $this->indexBatchSize,
+                    $this->indexTableColumns,
+                    $this->primaryColumn,
+                    $ids,
+                    $page
+                ));
+
+                if (!empty($data)) {
+                    $this->processBatch($data, $existingIds);
+                }
+
+                $page++;
+            } while (count($data) === $this->indexBatchSize && empty($ids));
+
+            if (!empty($ids)) {
+                $this->handleMissingIds($ids, $existingIds);
             }
 
-            $page++;
-        } while (count($data) === $this->indexBatchSize && empty($ids));
-
-        if (!empty($ids)) {
-            $this->handleMissingIds($ids, $existingIds);
-        }
-    }
-
-    private function buildSelectQuery(
-        \Magento\Framework\DB\Adapter\AdapterInterface $connection,
-        string $table,
-        array $ids,
-        int $page
-    ): \Magento\Framework\DB\Select {
-        $select = $connection->select()
-            ->from($table, array_unique([...$this->indexTableColumns, $this->primaryColumn]));
-
-        if (!empty($ids)) {
-            $select->where($this->primaryColumn . ' IN (?)', $ids);
-        } else {
-            $select->limit($this->indexBatchSize, $page * $this->indexBatchSize);
+            return;
         }
 
-        return $select;
+        throw new \Exception('Index Builder Search Failed. Mode does not exist.');
     }
+
 
     private function processBatch(array $data, array &$existingIds): void
     {
