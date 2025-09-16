@@ -217,7 +217,7 @@ class IndexBuilderSearch implements IndexBuilderSearchInterface
                 $ids,
             ) as $data) {
                 $batch[] = $data;
-                if(count($batch) > $this->indexBatchSize){
+                if(count($batch) > 1000){
                     $this->processBatch($batch, $existingIds);
                     $batch = [];
                 }
@@ -378,28 +378,60 @@ class IndexBuilderSearch implements IndexBuilderSearchInterface
 
     protected function buildQuery(array $searchCriteria): array
     {
-        $must = [];
+        $must   = [];
         $filter = [];
+        $should = [];
 
         foreach ($searchCriteria as $field => $criterion) {
             if (!is_array($criterion) || !isset($criterion['value'])) {
                 $criterion = ['condition' => 'EQ', 'value' => $criterion];
             }
 
-            $condition = strtoupper($criterion['condition'] ?? 'EQ');
-            $value = $criterion['value'];
+            $condition = strtoupper((string)($criterion['condition'] ?? 'EQ'));
+            $value     = $criterion['value'];
 
-            switch (strtoupper($condition)) {
+            switch ($condition) {
                 case 'LIKE':
+                    // 1) Multi-field LIKE (priority via weights)
+                    //    Expect: ['value' => $q, 'fields' => ['fieldA' => 5.0, 'fieldB' => 2.0]]
+                    //    Or:     ['value' => $q, 'fields' => ['fieldA','fieldB']]  // weights auto-assigned
+                    if (isset($criterion['fields']) && is_array($criterion['fields'])) {
+                        $pattern = strtolower(str_replace('%', '*', (string)$value)) . '*';
 
-                    $must[] = [
-                        'wildcard' => [
-                            $this->normalizeFieldName($field) => [
-                                'value' => strtolower(str_replace('%', '*', $value)) . '*',
-                                'case_insensitive' => true,
-                            ]
-                        ]
-                    ];
+                        // Normalize fields => weights
+                        $weights = [];
+                        $pos = count($criterion['fields']);
+                        foreach ($criterion['fields'] as $k => $v) {
+                            if (is_string($k)) { // assoc: field => weight
+                                $weights[$k] = (float)$v;
+                            } else {            // numeric: field list → descending weights
+                                $weights[(string)$v] = max(1.0, (float)$pos);
+                                $pos--;
+                            }
+                        }
+
+                        foreach ($weights as $fld => $boost) {
+                            $should[] = [
+                                'wildcard' => [
+                                    $this->normalizeFieldName($fld) => [
+                                        'value'            => $pattern,
+                                        'case_insensitive' => true,
+                                        'boost'            => $boost,
+                                    ],
+                                ],
+                            ];
+                        }
+                    } else {
+                        $pattern = strtolower(str_replace('%', '*', (string)$value)) . '*';
+                        $should[] = [
+                            'wildcard' => [
+                                $this->normalizeFieldName($field) => [
+                                    'value'            => $pattern,
+                                    'case_insensitive' => true,
+                                ],
+                            ],
+                        ];
+                    }
                     break;
 
                 case 'EQ':
@@ -414,8 +446,8 @@ class IndexBuilderSearch implements IndexBuilderSearchInterface
                 case 'GTE':
                 case 'LT':
                 case 'LTE':
-                    $opMap = ['GT' => 'gt', 'GTE' => 'gte', 'LT' => 'lt', 'LTE' => 'lte'];
-                    $must[] = ['range' => [$field => [$opMap[$condition] => $value]]];
+                    $op = ['GT' => 'gt', 'GTE' => 'gte', 'LT' => 'lt', 'LTE' => 'lte'][$condition];
+                    $must[] = ['range' => [$field => [$op => $value]]];
                     break;
 
                 default:
@@ -424,8 +456,12 @@ class IndexBuilderSearch implements IndexBuilderSearchInterface
         }
 
         $bool = [];
-        if ($must)   { $bool['must'] = $must; }
+        if ($must)   { $bool['must']   = $must; }
         if ($filter) { $bool['filter'] = $filter; }
+        if ($should) {
+            $bool['should'] = $should;
+            $bool['minimum_should_match'] = 1;
+        }
 
         return ['bool' => $bool];
     }
