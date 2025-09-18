@@ -5,6 +5,7 @@
                 type="ModuleToolkit\TableManagerOpenSearch\TableManager\BuildSelectQuery"/>
     <type name="ModuleToolkit\TableManagerOpenSearch\TableManager\IndexBuilderSearch">
         <arguments>
+            <argument name="buildSelectQuery" xsi:type="object">ModuleToolkit\TableManagerOpenSearch\TableManager\BuildSelectQuery</argument>
             <argument name="indexResponseResult" xsi:type="object">ModuleToolkit\TableManagerOpenSearch\TableManager\ResponseResult</argument>
         </arguments>
     </type>
